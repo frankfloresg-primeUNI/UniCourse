@@ -27,3 +27,19 @@ button {
     padding: 10px 15px;
     cursor: pointer;
 }
+
+#search {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+.course-detail {
+    background: white;
+    padding: 30px;
+    margin-top: 20px;
+    border-radius: 10px;
+}
