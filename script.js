@@ -1,67 +1,58 @@
-const courses = [
-    {
-        id: 1,
-        name: "Programación I",
-        professor: "Juan Pérez",
-        rating: 4.5,
-        description: "Curso donde aprendes fundamentos de programación.",
-        advice: "Practica programación todas las semanas."
-    },
-    {
-        id: 2,
-        name: "Cálculo II",
-        professor: "María López",
-        rating: 4.2,
-        description: "Curso enfocado en integrales y aplicaciones.",
-        advice: "Haz ejercicios constantemente y no acumules temas."
-    },
-    {
-        id: 3,
-        name: "Circuitos Eléctricos",
-        professor: "Carlos Torres",
-        rating: 3.8,
-        description: "Análisis de circuitos eléctricos y sus componentes.",
-        advice: "Practica problemas y entiende los conceptos antes de memorizar."
-    }
-];
-
-
-// ==============================
-// PÁGINA PRINCIPAL
-// ==============================
+let courses = [];
 
 const container = document.getElementById("courses-container");
 
-if (container) {
 
-    function mostrarCursos(lista) {
+async function cargarCursos() {
 
-        container.innerHTML = "";
+    const response = await fetch(
+        "http://127.0.0.1:5000/api/courses"
+    );
 
-        lista.forEach(course => {
-
-            const card = document.createElement("div");
-
-            card.classList.add("course");
-
-            card.innerHTML = `
-                <h3>${course.name}</h3>
-                <p>Profesor: ${course.professor}</p>
-                <p>⭐ ${course.rating}</p>
-
-                <a href="detalle.html?id=${course.id}">
-                    <button>Ver curso</button>
-                </a>
-            `;
-
-            container.appendChild(card);
-        });
-    }
+    courses = await response.json();
 
     mostrarCursos(courses);
+}
 
 
-    // BUSCADOR
+function mostrarCursos(lista) {
+
+    container.innerHTML = "";
+
+    lista.forEach(course => {
+
+        const card = document.createElement("div");
+
+        card.classList.add("course");
+
+        card.innerHTML = `
+            <h3>${course.name}</h3>
+
+            <p>Profesor: ${course.professor}</p>
+
+            <p>⭐ ${course.rating}</p>
+
+            <a href="detalle.html?id=${course.id}">
+                <button>Ver curso</button>
+            </a>
+
+            <button onclick="editarCurso(${course.id})">
+                ✏️ Editar
+            </button>
+
+            <button onclick="eliminarCurso(${course.id})">
+                🗑️ Eliminar
+            </button>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+
+if (container) {
+
+    cargarCursos();
 
     const search = document.getElementById("search");
 
@@ -69,57 +60,178 @@ if (container) {
 
         const text = search.value.toLowerCase();
 
-        const filteredCourses = courses.filter(course =>
+        const filtered = courses.filter(course =>
             course.name.toLowerCase().includes(text)
         );
 
-        mostrarCursos(filteredCourses);
+        mostrarCursos(filtered);
     });
 }
 
 
-// ==============================
-// PÁGINA DE DETALLE
-// ==============================
+const detailContainer =
+    document.getElementById("course-detail");
 
-const detailContainer = document.getElementById("course-detail");
+
+async function cargarDetalle() {
+
+    const params =
+        new URLSearchParams(window.location.search);
+
+    const id = params.get("id");
+
+    const response = await fetch(
+        `http://127.0.0.1:5000/api/courses/${id}`
+    );
+
+    if (!response.ok) {
+
+        detailContainer.innerHTML =
+            "<h2>Curso no encontrado</h2>";
+
+        return;
+    }
+
+    const course = await response.json();
+
+    detailContainer.innerHTML = `
+        <h2>${course.name}</h2>
+
+        <p>
+            <strong>Profesor:</strong>
+            ${course.professor}
+        </p>
+
+        <p>
+            <strong>Rating:</strong>
+            ⭐ ${course.rating}
+        </p>
+
+        <hr>
+
+        <h3>Descripción</h3>
+        <p>${course.description}</p>
+
+        <h3>💡 Consejo</h3>
+        <p>${course.advice}</p>
+    `;
+}
+
 
 if (detailContainer) {
+    cargarDetalle();
+}
 
-    const params = new URLSearchParams(window.location.search);
+const form = document.getElementById("course-form");
 
-    const id = Number(params.get("id"));
+if (form) {
 
-    const course = courses.find(course => course.id === id);
+    form.addEventListener("submit", async (event) => {
 
-    if (course) {
+        event.preventDefault();
 
-        detailContainer.innerHTML = `
-            <h2>${course.name}</h2>
+        const newCourse = {
+            name: document.getElementById("name").value,
+            professor: document.getElementById("professor").value,
+            rating: Number(document.getElementById("rating").value),
+            description: document.getElementById("description").value,
+            advice: document.getElementById("advice").value
+        };
 
-            <p>
-                <strong>Profesor:</strong>
-                ${course.professor}
-            </p>
+        const response = await fetch(
+            "http://127.0.0.1:5000/api/courses",
+            {
+                method: "POST",
 
-            <p>
-                <strong>Rating:</strong>
-                ⭐ ${course.rating}
-            </p>
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-            <hr>
+                body: JSON.stringify(newCourse)
+            }
+        );
 
-            <h3>Descripción</h3>
-            <p>${course.description}</p>
+        const result = await response.json();
 
-            <h3>💡 Consejo</h3>
-            <p>${course.advice}</p>
-        `;
+        console.log(result);
 
-    } else {
+        form.reset();
 
-        detailContainer.innerHTML = `
-            <h2>Curso no encontrado</h2>
-        `;
+        cargarCursos();
+    });
+}
+
+async function eliminarCurso(id) {
+
+    const confirmar = confirm(
+        "¿Seguro que quieres eliminar este curso?"
+    );
+
+    if (!confirmar) {
+        return;
     }
+
+    await fetch(
+        `http://127.0.0.1:5000/api/courses/${id}`,
+        {
+            method: "DELETE"
+        }
+    );
+
+    cargarCursos();
+}
+
+async function editarCurso(id) {
+
+    const course = courses.find(
+        course => course.id === id
+    );
+
+    const name = prompt(
+        "Nombre del curso:",
+        course.name
+    );
+
+    if (!name) return;
+
+    const professor = prompt(
+        "Profesor:",
+        course.professor
+    );
+
+    const rating = prompt(
+        "Rating:",
+        course.rating
+    );
+
+    const description = prompt(
+        "Descripción:",
+        course.description
+    );
+
+    const advice = prompt(
+        "Consejo:",
+        course.advice
+    );
+
+    await fetch(
+        `http://127.0.0.1:5000/api/courses/${id}`,
+        {
+            method: "PUT",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                name,
+                professor,
+                rating: Number(rating),
+                description,
+                advice
+            })
+        }
+    );
+
+    cargarCursos();
 }
